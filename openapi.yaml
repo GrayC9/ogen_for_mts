@@ -1,0 +1,132 @@
+openapi: 3.0.3
+info:
+  title: Ogen Demo API
+  version: 1.0.0
+  description: Simple CRUD API for User entity to demonstrate ogen code generation.
+servers:
+  - url: http://localhost:8080
+paths:
+  /users:
+    post:
+      operationId: CreateUser
+      summary: Create a new user
+      description: Creates a new user and returns it with an assigned ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        default:
+          description: Unexpected error
+    get:
+      operationId: ListUsers
+      summary: List users
+      description: Returns a list of all users.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        default:
+          description: Unexpected error
+  /users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: User ID
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+    get:
+      operationId: GetUser
+      summary: Get a user by ID
+      description: Retrieves a user by its unique identifier.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: Not Found
+        default:
+          description: Unexpected error
+    put:
+      operationId: UpdateUser
+      summary: Update a user by ID
+      description: Updates an existing user and returns the updated object.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: Not Found
+        default:
+          description: Unexpected error
+    delete:
+      operationId: DeleteUser
+      summary: Delete a user by ID
+      description: Deletes a user and returns no content.
+      responses:
+        '204':
+          description: No Content
+        default:
+          description: Unexpected error
+components:
+  schemas:
+    User:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: Alice
+        description:
+          type: string
+          nullable: true
+          example: Optional description
+    UserCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
