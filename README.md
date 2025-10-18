@@ -1,64 +1,89 @@
 # ogen_for_mts
 
-Тестовое задание: генерация Go кода с помощью ogen, добавление комментариев к методам из OpenAPI и реализация сервера/клиента с in-memory хранилищем.
+Небольшой демо‑проект про генерацию Go‑кода из OpenAPI с помощью ogen, добавление комментариев к методам из описания и запуск простого сервера/клиента на in‑memory хранилище.
 
-Ключевой ответ: чтобы комментарий попал в сгенерированный ogen код для handle-метода, его нужно указать в поле `description` объекта операции OpenAPI (paths -> <path> -> <method> -> description). Именно `operation.description` ogen переносит в комментарии над соответствующим методом интерфейса/хендлера.
+Короткий ответ на главный вопрос: чтобы комментарии попали в сгенерированные методы интерфейса/хендлера, опишите их в поле `operation.description` OpenAPI (paths → <path> → <method> → description). Именно это поле ogen переносит в комментарии над методами.
 
-Проект содержит:
-- openapi.yaml — OpenAPI спецификация с одной сущностью User и CRUD методами. У каждой операции заполнены `summary` и `description`.
-- Makefile — команда для генерации кода `make generate`.
-- tools.go — фиксация инструмента `ogen` через build tools, можно `go generate`.
-- internal/server/ — реализация in-memory handlers, удовлетворяющих интерфейсу, который сгенерирует ogen. Файлы помечены build-тегом `//go:build ogen`, чтобы проект можно было держать в репозитории до генерации кода.
-- cmd/server — запуск HTTP сервера на основе сгенерированного роутера/серверного кода.
-- cmd/client — пример клиента, использующего сгенерированный клиент для CRUD операций.
+Что внутри проекта:
 
-Важное замечание:
-- Мы не расширяем/не модифицируем сам ogen. Комментарии появляются благодаря полям `description` в OpenAPI. После генерации вы увидите эти комментарии в файлах в каталоге `internal/api` над методами интерфейса/хендлера.
+- openapi.yaml — спецификация с сущностью User и CRUD‑операциями. У каждой операции есть `summary` и подробный `description`.
+- Makefile — удобные цели: `make generate`, `make run-server`, `make run-client`, `make verify`.
+- generate.go, tools.go — фиксация инструмента ogen и пример `go generate`.
+- internal/server — реализация in‑memory обработчика, удовлетворяющего сгенерированному интерфейсу (файлы под build‑тегом `//go:build ogen`).
+- cmd/server — запуск HTTP‑сервера на базе сгенерированного роутера.
+- cmd/client — пример клиента, использующего сгенерированный клиент.
 
-Требования:
-- Go 1.22+
+Важные нюансы структуры кода
+
+- В репозитории уже лежит один снэпшот сгенерированного кода в каталоге `internal/api_1` — именно его используют примеры сервера и клиента.
+- Цель `make generate` генерирует свежий код в `internal/api` (другая папка). Это сделано специально, чтобы наглядно увидеть, как появляются комментарии из `description` прямо после генерации, не трогая рабочие примеры.
+- Мы не патчим и не форкаем ogen — все комментарии берутся из OpenAPI как есть.
+
+Требования
+
+- Go 1.24+
 - Установленный ogen
 
-Установка ogen:
+Установка ogen
+
 ```
 go install github.com/ogen-go/ogen/cmd/ogen@latest
 ```
-Убедитесь, что `$GOPATH/bin` присутствует в PATH.
 
-Генерация кода:
+Убедитесь, что `$GOPATH/bin` (или `$GOBIN`) находится в `$PATH`.
+
+Генерация кода из OpenAPI
+
 ```
 make generate
-# или напрямую
+# или напрямую:
 # ogen --target internal/api --package api --clean openapi.yaml
 ```
-После генерации в каталоге `internal/api` появятся Go файлы. В них найдите интерфейс хендлера/сервера (обычно `type Handler interface { ... }` или похожую сущность) — над каждым методом появится комментарий из `description` соответствующей операции.
 
-Сборка и запуск сервера:
-Файлы сервера и клиента помечены build-тегом `ogen`, чтобы они компилировались только после генерации кода. Поэтому при запуске нужно указать тег сборки.
+После генерации в `internal/api` появятся файлы. Откройте интерфейс `Handler` — над методами будут комментарии из OpenAPI:
+- CreateUser — «Creates a new user and returns it with an assigned ID.»
+- ListUsers — «Returns a list of all users.»
+- GetUser — «Retrieves a user by its unique identifier.»
+- UpdateUser — «Updates an existing user and returns the updated object.»
+- DeleteUser — «Deletes a user and returns no content.»
+
+Запуск сервера
+
+Файлы сервера/клиента собраны под build‑тегом `ogen`, поэтому тег нужно указывать при запуске.
+
 ```
-# генерация кода
-make generate
+# при необходимости подтянуть зависимости
+make tidy
 
-# модульные зависимости (опционально)
-go mod tidy
-
-# запустить сервер на :8080
-go run -tags=ogen ./cmd/server
+# запустить сервер (по умолчанию на :8080)
+make run-server
+# или
+ADDR=":8081" go run -tags=ogen ./cmd/server
 ```
-Логи покажут, что сервер стартовал на 8080.
 
-Как проверить, что всё работает (автоматически):
-- Один шаг, который делает всё за вас: сгенерирует код, поднимет сервер, выполнит CRUD клиентом и остановит сервер:
+Сервер логирует «Starting server on :8080». Адрес можно задать через переменную окружения `ADDR`.
+
+Запуск клиента
+
+```
+# в отдельном терминале, когда сервер уже запущен
+make run-client
+# или
+BASE_URL="http://localhost:8080" go run -tags=ogen ./cmd/client
+```
+
+Клиент последовательно выполняет CRUD и печатает результаты: Created → List → Get → Updated → Deleted.
+
+Быстрая проверка end‑to‑end
+
 ```
 make verify
 ```
-Что вы увидите:
-- [verify] Generating code...
-- [verify] Starting server...
-- В логе клиента последовательность: Created, List, Get, Updated, Deleted
-- Если порт :8080 занят, задайте другой адрес для сервера: `ADDR=":8081" go run -tags=ogen ./cmd/server` или временно остановите процесс, держащий порт.
 
-Проверка запросами (curl):
+Скрипт сгенерирует код, поднимет сервер, выполнит CRUD запросы через клиент и корректно остановит сервер. Если порт 8080 занят — задайте `ADDR=":8081"` при запуске.
+
+Проверка через curl
+
 ```
 # Создать пользователя
 curl -sS -X POST http://localhost:8080/users \
@@ -80,31 +105,13 @@ curl -sS -X PUT http://localhost:8080/users/1 \
 curl -sS -X DELETE http://localhost:8080/users/1 -i
 ```
 
-Запуск клиента:
-```
-# в другом терминале, когда сервер уже запущен
-go run -tags=ogen ./cmd/client
-```
-Клиент выполнит последовательные CRUD операции и выведет результаты в лог.
+Как это работает внутри
 
-Как убедиться, что комментарии появились в сгенерированном коде:
-- Откройте любой из файлов в `internal/api`, где объявлен интерфейс обработчика (обычно рядом с именованными tipами операций).
-- Найдите методы, соответствующие `CreateUser`, `ListUsers`, `GetUser`, `UpdateUser`, `DeleteUser`.
-- Над каждым методом должен быть комментарий. Текст комментария будет взят из `description` в `openapi.yaml`.
+- Сущность `User`: поля `id:int64`, `name:string`, `description:*string` (nullable).
+- Хранилище — простая in‑memory map с мьютексом и автоинкрементом ID (см. `internal/storage`).
+- Обработчик реализует интерфейс, который сгенерировал(а) ogen (см. `internal/server/handler.go`). При отсутствии записи операции `Get/Update` возвращают 404‑ответы соответствующих типов из сгенерированного пакета.
 
-Структура OpenAPI:
-- Сущность `User` с полями `id:int64`, `name:string`, `description:*string`.
-- CRUD маршруты:
-  - POST /users — CreateUser — description: "Creates a new user and returns it with an assigned ID."
-  - GET /users — ListUsers — description: "Returns a list of all users."
-  - GET /users/{id} — GetUser — description: "Retrieves a user by its unique identifier."
-  - PUT /users/{id} — UpdateUser — description: "Updates an existing user and returns the updated object."
-  - DELETE /users/{id} — DeleteUser — description: "Deletes a user and returns no content."
+FAQ
 
-Примечания по реализованной серверной логике:
-- Используется in-memory map[id]*User и атомарный инкремент id.
-- Ожидаются типы, которые сгенерирует ogen. Реализация размещена в `internal/server/handler.go` и будет собираться при теге `ogen`.
-
-FAQ:
-- В какое поле добавить комментарий? — В operation.description (а не summary). Summary часто используется кратко, но для комментариев хендлеров ogen использует description.
-- Можно ли поменять формат комментариев без форка ogen? — В рамках задачи — нет, но можно влиять на текст через описание в OpenAPI.
+- Где писать текст комментариев? — В `operation.description`. Именно его переносит ogen в комментарии методов интерфейса/хендлеров. `summary` остаётся кратким заголовком.
+- Можно ли поменять формат комментариев без изменений в ogen? — Нет, в рамках задачи мы влияем только на текст в OpenAPI.
