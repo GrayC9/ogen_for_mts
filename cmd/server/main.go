@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"os"
 
-	api "github.com/example/ogen_for_mts/internal/api"
-	"github.com/example/ogen_for_mts/internal/server"
+	api "github.com/GrayC9/ogen_for_mts/internal/api_1"
+	"github.com/GrayC9/ogen_for_mts/internal/server"
 )
 
 func main() {

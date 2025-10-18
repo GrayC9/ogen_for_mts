@@ -6,7 +6,7 @@ import (
 	"context"
 	"sync"
 
-	api "github.com/example/ogen_for_mts/internal/api"
+	api "github.com/example/ogen_for_mts/internal/api_1"
 )
 
 type inmem struct {
@@ -19,14 +19,12 @@ func NewInMemoryHandler() (api.Handler, error) {
 	return &inmem{users: make(map[int64]*api.User), next: 1}, nil
 }
 
-// Creates a new user and returns it with an assigned ID.
 func (s *inmem) CreateUser(ctx context.Context, req *api.UserCreate) (api.CreateUserRes, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	id := s.next
 	s.next++
 	u := &api.User{ID: id, Name: req.Name}
-	// Optional description
 	if v, ok := req.Description.Get(); ok {
 		u.Description.SetTo(v)
 	}
@@ -34,7 +32,6 @@ func (s *inmem) CreateUser(ctx context.Context, req *api.UserCreate) (api.Create
 	return u, nil
 }
 
-// Returns a list of all users.
 func (s *inmem) ListUsers(ctx context.Context) (api.ListUsersRes, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -46,7 +43,6 @@ func (s *inmem) ListUsers(ctx context.Context) (api.ListUsersRes, error) {
 	return &res, nil
 }
 
-// Retrieves a user by its unique identifier.
 func (s *inmem) GetUser(ctx context.Context, params api.GetUserParams) (api.GetUserRes, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -57,7 +53,6 @@ func (s *inmem) GetUser(ctx context.Context, params api.GetUserParams) (api.GetU
 	return u, nil
 }
 
-// Updates an existing user and returns the updated object.
 func (s *inmem) UpdateUser(ctx context.Context, req *api.UserUpdate, params api.UpdateUserParams) (api.UpdateUserRes, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -78,11 +73,9 @@ func (s *inmem) UpdateUser(ctx context.Context, req *api.UserUpdate, params api.
 	return u, nil
 }
 
-// Deletes a user and returns no content.
 func (s *inmem) DeleteUser(ctx context.Context, params api.DeleteUserParams) (api.DeleteUserRes, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// As per spec, DELETE only returns 204; if not found, we still return 204.
 	delete(s.users, params.ID)
 	return &api.DeleteUserNoContent{}, nil
 }
